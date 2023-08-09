@@ -1,0 +1,34 @@
+server:
+  port: 8080
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/sql_store?useSSL=false
+    username: huangjinhui
+    password: huangjinhui
+    driver-class-name: com.mysql.jdbc.Driver
+  application:
+    name: orderservice  #order服务
+  cloud:
+    nacos:
+      server-addr: localhost:80
+      discovery:
+        cluster-name: SH #集群名称
+        namespace: 9b341b5b-ed2d-41be-8dfe-14ca35397f86
+        ephemeral: false # 非临时实例
+mybatis:
+  type-aliases-package: cn.itcast.user.pojo
+  configuration:
+    map-underscore-to-camel-case: true
+logging:
+  level:
+    cn.itcast: debug
+  pattern:
+    dateformat: MM-dd HH:mm:ss:SSS
+userservice:
+  ribbon:
+    NFLoadBalancerRuleClassName: com.alibaba.cloud.nacos.ribbon.NacosRule # 负载均衡规则
+# feign:
+#   client:
+#     config:
+#       default:
+#         logger-level: full

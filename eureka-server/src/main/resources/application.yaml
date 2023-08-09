@@ -1,0 +1,8 @@
+server:
+  port: 10086
+spring:
+  application:
+    name: eurekaservice #服务名称
+  cloud:
+    nacos:
+      server-addr: localhost:8848

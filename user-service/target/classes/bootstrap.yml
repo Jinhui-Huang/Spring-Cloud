@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: userservice
+  profiles:
+    active: dev # 开发地址
+  cloud:
+    nacos:
+      discovery:
+        cluster-name: SH  # 集群名称, 这里代表杭州
+        namespace: 9b341b5b-ed2d-41be-8dfe-14ca35397f86
+      server-addr: localhost:80  # nacos地址
+      config:
+        file-extension: yaml # 文件后缀名
