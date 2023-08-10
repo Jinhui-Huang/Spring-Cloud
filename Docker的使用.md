@@ -38,3 +38,23 @@ Docker操作命令
 - docker load(加载压缩包为镜像)
 
 ![img.png](resources/img/img_14.png)
+
+### (2). 创建容器
+- docker run(创建容器, 并运行)
+- docker unpause/pause(暂停容器)
+- docker stop(停止容器)
+- docker start(开始容器)
+- docker logs(查看容器运行日志)
+- docker ps(查看所有运行的容器及状态)
+
+### (3). 创建运行一个Nginx容器
+`docker run --name containerName -p 80:80 -d nginx`
+
+命令解读:
+- docker run: 创建并运行一个容器
+- --name: 给容器起一个名字, 比如叫做mn
+- -p: 将宿主机端口与容器端口映射, 冒号左侧是宿主机端口, 右侧是容器端口
+- -d: 后台运行容器
+- docker logs: 查看容器日志
+- 添加-f参数可以持续查看日志
+- docker ps: 查看容器状态
