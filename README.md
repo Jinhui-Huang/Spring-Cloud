@@ -735,4 +735,10 @@ feign:
 缺点:
 - 功能过多, 显得冗杂
 
+实现过程:
+- 首先创建一个module, 命名为feign-api, 然后引入feign的starter依赖
+- 将order-service中编写的UserClient, User, DefaultFeignConfiguration都复制到Feign-api项目中
+- 在order-service中引入feign-api的依赖
+- 修改order-service中的所有与上述三个组件有关的import部分, 改成导入feign-api中的包
+
 ## 八. GateWay网关组件
