@@ -286,7 +286,7 @@ public class OrderApplication {
 拦截请求解析service找到真正的地址
 
 Ribbon的负载均衡规则是一个叫做IRule的接口来定义的, 每一个子接口都是一种规则:
-![img_1.png](img_1.png)
+![img_1.png](resources/img/img_1.png)
 
 通过`定义IRule`实现可以修改负载均衡规则, 有两种方式:
 
@@ -334,7 +334,7 @@ Ribbon的负载均衡规则是一个叫做IRule的接口来定义的, 每一个�
 
 Nacos是阿里巴巴产品, 现在是Spring的一个组件之一, 相比Eureka功能更加丰富
 
-[Nacos安装和配置](Nacos安装指南.md)
+[Nacos安装和配置](resources/Nacos安装指南.md)
 
 Nacos依赖配置:
 
@@ -434,7 +434,7 @@ Nacos中服务存储和数据存储的最外层都是一个名为namespace的佛
 
 ### 3. Nacos注册中心原理
 
-![img_2.png](img_2.png)
+![img_2.png](resources/img/img_2.png)
 
 #### (1). 临时实例和非临时实例
 
@@ -467,7 +467,7 @@ spring:
 - 配置更改热更新 - 将配置管理服务变更的配置和本地服务的配置进行结合, 同时自动更新不需要重启服务
 - Nacos配置管理服务(读取配置), Nacos注册中心(注册发现)
 
-![img_3.png](img_3.png)
+![img_3.png](resources/img/img_3.png)
 
 - 配置获取的步骤如下: 项目启动--->读取Nacos中的配置文件--->读取本地配置文件application.yml--->创建spring容器--->加载bean
 - 首先需要配置bootstrap.yaml配置文件, 这个文件的优先级高于application.yaml, 与Nacos的所有相关配置都写在这里
@@ -579,7 +579,7 @@ public class UserController {
 
 ### 4. 搭建Nacos集群
 
-Nacos生产环境下一定要部署为集群状态, 部署方式参考[nacos集群搭建](nacos集群搭建.md)
+Nacos生产环境下一定要部署为集群状态, 部署方式参考[nacos集群搭建](resources/nacos集群搭建.md)
 
 **搭建集群的步骤:**
 
@@ -648,7 +648,8 @@ Feign是一个声明式的http客户端, 起作用就是帮助我们优雅的实
    }
    ```
 ### 2. 自定义配置
-![img_4.png](img_4.png)
+![img_4.png](resources/img/img_4.png)
+
 配置Feign日志的两种方式:
 
 方式一: 配置文件方式
@@ -720,7 +721,7 @@ feign:
 
 给消费者的FeignClient和提供者的controller定义统一的父接口作为标准
 
-![img_5.png](img_5.png)
+![img_5.png](resources/img/img_5.png)
 
 缺点: 
 - 服务紧耦合
@@ -730,7 +731,7 @@ feign:
 将FeignClient抽取为独立模块, 并且把接口有关的POJO, 默认的Feign配置都放到这个模块中, 
 提供给所有消费者使用
 
-![img_6.png](img_6.png)
+![img_6.png](resources/img/img_6.png)
 
 缺点:
 - 功能过多, 显得冗杂
@@ -741,4 +742,202 @@ feign:
 - 在order-service中引入feign-api的依赖
 - 修改order-service中的所有与上述三个组件有关的import部分, 改成导入feign-api中的包
 
+不同包的FeignClient的导入方式有两种方式:
+- 在@EanbleFeignClients注解中添加basePackages, 指定FeignClient所在的包
+- 在@EanbleFeignClients注解中添加clients, 指定具体的FeignClient字节码
+
 ## 八. GateWay网关组件
+### (1). 为什么需要网关
+- 网关功能: 
+  - 身份认证和权限效验
+  - 服务路由, 负载均衡
+  - 请求限流
+- 网关技术实现(SpringCloud网关的实现两种):
+  - gateway
+  - zuul
+zuul是基于Servlet的实现, 属于阻塞式编程, 而SpringCloudGateway则是基于Spring5中提供的WebFlux, 
+属于响应式编程的实现, 具备更好的性能
+
+### (2). 搭建网关服务
+搭建网关服务的步骤: 
+1. 创建新module, 引入SpringCloudGateway的依赖和nacos的服务注册发现依赖:
+   ```xml
+   <!--nacos服务注册发现依赖-->
+   <dependency>
+       <groupId>com.alibaba.cloud</groupId>
+       <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+   </dependency>
+   
+   <!--网关gateway依赖-->
+   <dependency>
+       <groupId>org.springframework.cloud</groupId>
+       <artifactId>spring-cloud-starter-gateway</artifactId>
+   </dependency>
+   ```
+
+2. 实现请求路由功能(编写路由配置及nacos地址):
+![img.png](resources/img/img_7.png)
+
+   ```yaml
+   server:
+     port: 10010
+   spring:
+     application:
+       name: gateway
+     cloud:
+       nacos:
+         server-addr: localhost:80 # nacos地址
+         discovery:
+           namespace: uuid
+       gateway:
+         routes:
+           - id: user-service # 路由标识, 必须唯一
+             uri: lb://userservice #路由的目标地址
+             predicates: # 路由断言, 判断请求是否符合规则
+               - Path=/user/** # 路径断言, 判断路径是否符合是以/user开头, 如果是则符合
+           - id: order-service
+             uri: lb://orders*ervice
+             predicates:
+               - Path=/order/**
+   ```
+   ![img.png](resources/img/img_8.png)
+
+3. 路由断言工厂5
+   ![img.png](resources/img/img_9.png)
+4. 路由过滤器GatewayFilter
+   - 网关中提供的一种过滤器, 可以对象那个进入网关的请求和微服务返回的响应做处理
+
+      ![img.png](resources/img/img_10.png)
+   - Spring提供的过滤器工厂
+
+      ![img.png](resources/img/img_11.png)
+
+   - 给所有进入userservice的请求添加一个请求头: Truth=itstudy is my workspace 
+   给配置文件直接加个过滤器配置
+   ```yaml
+   spring:
+     application:
+       name: gateway
+     cloud:
+       gateway:
+         routes:
+           filters:
+             - AddRequestHeader=Truth,itstudy is my workspace
+   ```
+   - 所有服务的请求都加上一个请求头
+   ```yaml
+   spring:
+     application:
+       name: gateway
+     cloud:
+       gateway:
+         routes:
+         default-filters:  # 与routes同级
+           - AddRequestHeader=Truth,itstudy is my workspace
+   ```
+5. 全局过滤器 GlobalFilter
+
+   与GatewayFilter的作用一样, 区别在于GateFilter通过配置定义, 处理逻辑是固定的, 而GlobalFilter的逻辑需要自己写代码实现
+   
+   定义方式是实现GlobalFilter接口
+   
+   案例: 定义全局过滤器, 拦截请求, 判断请求的参数是否满足下列要求:
+   
+   ```java
+   /**
+    * className AuthorizeFilter
+    * packageName cn.itcast.gateway
+    * Description AuthorizeFilter全局过滤器
+    * # @Order(-1) 拦截器的优先级
+    * @author huian
+    * @version 1.0
+    * @Date: 2023/8/10 11:31
+    */
+   /*@Order(-1)*/
+   @Component
+   public class AuthorizeFilter implements GlobalFilter, Ordered {
+   
+       /**
+        * Description: 定义全局过滤器, 拦截请求, 判断请求的参数是否满足下列要求:
+        * 1. 参数中是否有authorization
+        * 2. authorization参数值是否为admin
+        * 3. 如果同时满足则放行, 否则拦截
+        * @return reactor.core.publisher.Mono<java.lang.Void> 返回标示当前过滤器业务结束
+        * @param exchange 请求上下文, 里面可以获取Request, Response等信息
+        * @param chain 用来把请求委托给下一个过滤器
+        * @author huian
+        * @Date 2023/8/10
+        * */
+       @Override
+       public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+           /*1. 获取请求参数*/
+           ServerHttpRequest request = exchange.getRequest();
+           MultiValueMap<String, String> queryParams = request.getQueryParams();
+           /*2. 获取参数中的authorization参数*/
+           String auth = queryParams.getFirst("authorization");
+           /*3. 判断参数值是否等于admin*/
+           if ("admin".equals(auth)) {
+               /*4. 是, 放行*/
+               return chain.filter(exchange);
+           }
+           /*5. 否, 拦截*/
+           /*5.1. 设置状态码*/
+           exchange.getResponse().setStatusCode(HttpStatus.NOT_FOUND);
+           /*5.2. 返回拦截状态*/
+           return exchange.getResponse().setComplete();
+       }
+   
+       /**
+        * Description: getOrder与@Order(-1)同样的作用, 设置拦截器的优先级
+        * @return int
+        * @author huian
+        * @Date 2023/8/10
+        * */
+       @Override
+       public int getOrder() {
+           return -1;
+       }
+   }
+   ```
+   只有访问这个链接时加上authorization=admin才能成功: `http://localhost:10010/user/1?authorization=admin`
+
+6. 过滤器执行顺序
+
+请求进入网关后会碰到三类过滤器: 当前路由的过滤器, DefaultFilter, GlobalFilter
+
+请求路由后, 会将当前路由过滤器和DefaultFilter, GlobalFilter, 合并到过滤器链(集合)中, 排序后依次执行每个过滤器
+- 每一个过滤器都必须制定一个int类型的order值, **order值越小, 优先级越高, 执行顺序越靠前**
+- GlobalFilter通过实现Order接口, 或者添加@Ordered接口来指定Order值, 有我们自己制定
+- 路由过滤器和defaultFilter的order由Spring制定, 默认是按照声明顺序从1递增
+- 当过滤器的order值一样时, 会按照 defaultFilter > 路由过滤器 > GlobalFilter的顺序来执行
+
+### (3). 跨域问题处理
+跨域: 域名不一致就是跨域, 主要包括:
+- 域名不同: www.taobao.com 和 www.taobao.org 和 www.jd.com 和 miaosha.jd.com
+- 域名相同, 端口不同: localhost:8080 和 localhost:8081
+
+跨域问题: 游览器禁止请求的发起者与服务端发生跨域ajax请求, 请求被游览器拦截的问题
+
+解决方案: CORS
+
+网关处理跨域同样采用CORS方案, 只需如下配置:
+```yaml
+spring:
+  gateway:
+    globalcors: # 全局的跨域处理
+      add-to-simple-url-handler-mapping: true # 解决options请求被拦截问题
+      corsConfigurations:
+        '[/**]':
+          allowedOrigins: # 允许哪些网站的跨域请求
+            - "http://localhost:5500"
+            - "http://www.leyou.com"
+          allowedMethods: # 允许的跨域ajax的请求方式
+            - "GET"
+            - "POST"
+            - "DELETE"
+            - "PUT"
+            - "OPTIONS"
+          allowedHeaders: "*" # 允许在请求中携带的头信息
+          allowCredentials: true # 是否允许携带cookie
+          maxAge: 360000 # 这次跨域检测的有效期360000秒
+```
