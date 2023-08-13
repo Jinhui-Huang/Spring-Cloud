@@ -943,7 +943,83 @@ spring:
 ```
 
 ## 九. MQ异步通信技术
-### 
+### 1. 初识MQ
+#### (1). 同步通讯
+微服务间基于Feign的调用就属于同步方式, 存在一些问题
+- 同步调用的优点:
+  - 时效性较强, 可以立即得到结果
+- 同步调用存在的问题: 
+  - 耦合度高: 每次加入新需求, 都要修改原来的代码
+  - 性能下降: 调用者需要等待服务提供者响应, 如果调用链过长则响应时间等于每次调用的时间之和
+  - 资源浪费: 调用链中的每个服务在等待响应过程中, 不能释放占用的资源, 高并发场景下会极度浪费系统资源
+  - 级联失败: 如果服务提供者出现问题, 所有调用者都会跟着出问题, 如同多米诺骨牌一样, 迅速导致整个微服务群故障
+
+#### (2). 异步通讯
+异步调用常见实现就是事件驱动模式
+- 异步通信优点:
+  - 优势一: 服务解耦, 服务通过订阅事件的方式实现解耦
+  - 优势二: 性能提升, 吞吐量提高
+  - 优势三: 服务没有强依赖, 不担心级联失败问题
+  - 优势四: 流量消峰
+- 异步通信缺点:
+  - 依赖于Broker的可靠性, 安全性, 吞吐能力
+  - 架构复杂了, 业务没有明显的流程线, 不好追踪管理
+
+#### (3). MQ常见框架
+MQ(MessageQueue), 中文是消息队列, 字面来看就是存放消息的队列, 也就是事件驱动架构中的Broker.
+![img.png](resources/img/img_17.png)
+
+### 2. RabbitMQ快速入门
+#### (1). RabbitMQ概述和安装
+![img.png](resources/img/img_18.png)
+
+[RabbitMQ部署指南.md](resources/RabbitMQ部署指南.md)
+
+RabbitMQ中的几个概念:
+- channel: 操作MQ的工具
+- exchange: 路由消息到队列
+- queue: 缓存消息
+- virtual host: 虚拟主机, 是对queue, exchange等资源的逻辑分组
+
+#### (2). 常见消息模型
+- 基本消息队列(BasicQueue)
+- 工作消息队列(WorkQueue)
+- 发布订阅(Publish, Subscribe), 又根据交换机类型不同分为三种:
+  - Fanout Exchange: 广播
+  - Direct Exchange: 路由
+  - Topic Exchange: 主题
+
+最基础的消息队列模型只包括三个角色:
+- publisher: 消息发布者, 将消息发送到队列queue
+- queue: 消息队列, 负责接受并缓存消息
+- consumer: 订阅队列, 处理队列中的消息
+
+publisher-queue-consumer
+
+**基本消息队列的消息发送流程**
+1. 建立connection
+2. 创建channel(通道)
+3. 利用channel声明队列
+4. 利用channel向队列发送消息
+
+**基本消息队列的消息接受流程**
+1. 建立connection
+2. 创建channel(通道)
+3. 利用channel声明队列
+4. 定义consumer的消费行为handleDelivery()
+5. 利用channel将消费者与队列绑定
+
+
+### 3. SpringAMQP
+#### (1). 什么是SpringAMQP
+![img.png](resources/img/img_19.png)
+
+特征: 
+- 监听器容器, 用于异步处理入站消息
+- 用于发送和接收消息的RabbitTemplate
+- RabbitAdmin用于自动声明队列, 交换和排序
+
+
 
 
 

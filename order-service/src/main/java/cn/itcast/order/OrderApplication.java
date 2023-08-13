@@ -34,7 +34,6 @@ public class OrderApplication {
     public RestTemplate restTemplate(){
         return new RestTemplate();
     }
-
     /**
      * Description: randomRule负载均衡策略中的随机数策略
      * @return com.netflix.loadbalancer.IRule
