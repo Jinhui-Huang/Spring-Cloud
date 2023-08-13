@@ -101,3 +101,86 @@ exec命令可以进入容器修改文件, 但是在容器内修改文件是不�
   
 - -v volumeName:/targetContainerPath
 - 如果容器运行时volume不存在, 会自动被创建出来
+- 数据卷与目录直接挂载的
+  - 数据卷挂载耦合度低, 有docker来管理目录, 但是目录较深, 不好找
+  - 目录挂载耦合度高, 需要我们自己管理目录, 不过目录容易寻找查看
+## 四. Dockerfile自定义容器
+### (1). 镜像结构: 
+- 镜像是将应用程序及其需要的系统函数库, 环境, 配置, 依赖打包而成
+- 镜像结构(镜像是分层结构, 每一个层称为一个Layer):
+  - 入口(Entrypoint): 镜像运行入口, 一般是程序启动的脚本和参数
+  - 层(Layer): 在BaseImage基础上添加安装包, 依赖, 配置等, 每次操作都形成新的一层
+  - 基础镜像(BaseImage): 应用依赖的系统函数库, 环境, 配置, 文件等 
+  - 其他: 在BaseImage基础上添加依赖, 安装程序, 完成整个应用的安装和配置
+
+### (2). 什么是Dockerfile
+![img.png](resources/img/img_15.png)
+
+安装命令: . 是告诉docker Dockerfile在当前目录
+
+Dockerfile
+```
+# 指定基础镜像
+FROM ubuntu:16.04
+# 配置环境变量，JDK的安装目录
+ENV JAVA_DIR=/usr/local
+
+# 拷贝jdk和java项目的包
+COPY ./jdk8.tar.gz $JAVA_DIR/
+COPY ./docker-demo.jar /tmp/app.jar
+
+# 安装JDK
+RUN cd $JAVA_DIR \
+ && tar -xf ./jdk8.tar.gz \
+ && mv ./jdk1.8.0_144 ./java8
+
+# 配置环境变量
+ENV JAVA_HOME=$JAVA_DIR/java8
+ENV PATH=$PATH:$JAVA_HOME/bin
+
+# 暴露端口
+EXPOSE 8090
+# 入口，java项目的启动命令
+ENTRYPOINT java -jar /tmp/app.jar
+```
+
+```
+docker build -t javaweb:1.0 . 
+```
+
+简易版本[Dockerfile](resources/Dockerfile)
+```
+# 指定基础镜像
+FROM openjdk:8-alpine
+
+COPY ./docker-demo.jar /tmp/app.jar
+
+# 暴露端口
+EXPOSE 8090
+# 入口，java项目的启动命令
+ENTRYPOINT java -jar /tmp/app.jar
+```
+
+
+- Dockerfile本质是一个文件, 通过指令描述镜像的构建过程
+- Dockerfile的第一行必须是FROM, 从一个基础镜像来构建
+- 基础镜像可以是基本操作系统, 如Ubuntu. 也可以是其他人制作好的镜像, 例如: java:8-alpine
+
+## 五. DOckerCompose
+### (1). 初始DockerCompose
+- 可以基于Compose文件帮我们快速的部署分布式应用, 而无序手动一个个创建和运行容器
+- Compose文件是一个文本文件, 通过指令定义集群中的每个容器如何运行
+
+### (2). 部署微服务集群
+将之前所写的cloud-demo微服务部署到docker集群上去, 命令如下, 需要使用DockerCompose组件
+```
+docker-compose up -d
+```
+
+## 六. Docker镜像仓库
+- 搭建私有镜像仓库
+  - 可以在本地搭建私有Docker Registry
+  - 
+- 向镜像仓库推送镜像
+- 从镜像仓库拉去镜像
+  ![img.png](resources/img/img_16.png)

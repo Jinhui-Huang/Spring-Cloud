@@ -941,3 +941,26 @@ spring:
           allowCredentials: true # 是否允许携带cookie
           maxAge: 360000 # 这次跨域检测的有效期360000秒
 ```
+
+## 九. MQ异步通信技术
+### 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

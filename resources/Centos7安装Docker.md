@@ -224,7 +224,7 @@ services:
     ports:
       - 8080:80
     environment:
-      - REGISTRY_TITLE=传智教育私有仓库
+      - REGISTRY_TITLE=鲸鱼社井私有仓库
       - REGISTRY_URL=http://registry:5000
     depends_on:
       - registry
