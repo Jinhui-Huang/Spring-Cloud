@@ -1,5 +1,5 @@
 ## 一. 初识Docker
-![img.png](resources/img/img_12.png)
+![img.png](img/img_12.png)
 
 Docker是一个快速交付应用, 运行应用的技术:
 1. 可以将程序机器依赖, 运行环境一起打包为一个镜像, 可以迁移到任意linux操作系统
@@ -7,7 +7,7 @@ Docker是一个快速交付应用, 运行应用的技术:
 3. 启动, 移除都可以通过一行命令完成, 方便快捷
 
 ## 二. Docker与虚拟机
-![img.png](resources/img/img_13.png)
+![img.png](img/img_13.png)
 
 Docker和虚拟机的差异
 - docker是一个系统进程; 虚拟机是在操作系统中的操作系统
@@ -37,7 +37,7 @@ Docker操作命令
 - docker save(保存镜像为一个压缩包)
 - docker load(加载压缩包为镜像)
 
-![img.png](resources/img/img_14.png)
+![img.png](img/img_14.png)
 
 ### (2). 创建容器
 - docker run(创建容器, 并运行)
@@ -114,7 +114,7 @@ exec命令可以进入容器修改文件, 但是在容器内修改文件是不�
   - 其他: 在BaseImage基础上添加依赖, 安装程序, 完成整个应用的安装和配置
 
 ### (2). 什么是Dockerfile
-![img.png](resources/img/img_15.png)
+![img.png](img/img_15.png)
 
 安装命令: . 是告诉docker Dockerfile在当前目录
 
@@ -148,7 +148,7 @@ ENTRYPOINT java -jar /tmp/app.jar
 docker build -t javaweb:1.0 . 
 ```
 
-简易版本[Dockerfile](resources/Dockerfile)
+简易版本[Dockerfile](Dockerfile)
 ```
 # 指定基础镜像
 FROM openjdk:8-alpine
@@ -183,4 +183,4 @@ docker-compose up -d
   - 
 - 向镜像仓库推送镜像
 - 从镜像仓库拉去镜像
-  ![img.png](resources/img/img_16.png)
+  ![img.png](img/img_16.png)

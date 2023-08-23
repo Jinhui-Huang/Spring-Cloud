@@ -41,9 +41,30 @@
     * [2. 自定义配置](#2-自定义配置)
     * [3. Feign使用优化](#3-feign使用优化)
     * [4. 最佳实践](#4-最佳实践)
-      * [(1). 方式一(继承):](#1-方式一继承-)
-    * [(2). 方式二(抽取):](#2-方式二抽取-)
+      * [(1). 方式一(继承):](#1-方式一继承)
+    * [(2). 方式二(抽取):](#2-方式二抽取)
   * [八. GateWay网关组件](#八-gateway网关组件)
+    * [(1). 为什么需要网关](#1-为什么需要网关)
+    * [(2). 搭建网关服务](#2-搭建网关服务)
+    * [(3). 跨域问题处理](#3-跨域问题处理)
+  * [九. MQ异步通信技术](#九-mq异步通信技术)
+    * [1. 初识MQ](#1-初识mq)
+      * [(1). 同步通讯](#1-同步通讯)
+      * [(2). 异步通讯](#2-异步通讯)
+      * [(3). MQ常见框架](#3-mq常见框架)
+    * [2. RabbitMQ快速入门](#2-rabbitmq快速入门)
+      * [(1). RabbitMQ概述和安装](#1-rabbitmq概述和安装)
+      * [(2). 常见消息模型](#2-常见消息模型)
+    * [3. SpringAMQP](#3-springamqp)
+      * [(1). 什么是SpringAMQP](#1-什么是springamqp)
+      * [(4). 利用SpringAMQP实现HelloWorld中的基础消息队列](#4-利用springamqp实现helloworld中的基础消息队列)
+      * [(5). consumer中编写消费逻辑, 监听simple.queue](#5-consumer中编写消费逻辑-监听simplequeue)
+      * [(6). Work Queue工作队列](#6-work-queue工作队列)
+      * [(7). exchange(交换机)](#7-exchange交换机)
+        * [a. Fanout exchange](#a-fanout-exchange)
+        * [b. Direct exchange](#b-direct-exchange)
+        * [c. Topic exchange](#c-topic-exchange)
+      * [(8) AMQP-消息转换器](#8-amqp-消息转换器)
 <!-- TOC -->
 
 ## 一.认识微服务
@@ -592,14 +613,18 @@ Nacos生产环境下一定要部署为集群状态, 部署方式参考[nacos集�
 ## 七. Feign远程调用
 
 ### 1. Feign替代RestTemplate
+
 之前使用RestTemplate发起远程调用的代码:
+
 ```
 /*url路径*/
 String url = "http://userservice/user/" + order.getUserId();
 /* 4.返回*/
 User user = restTemplate.getForObject(url, User.class);
 ```
+
 存在以下问题:
+
 - 代码可读性差, 编程体验不统一
 - 参数复杂URL难以维护
 
@@ -647,13 +672,17 @@ Feign是一个声明式的http客户端, 起作用就是帮助我们优雅的实
     }
    }
    ```
+
 ### 2. 自定义配置
+
 ![img_4.png](resources/img/img_4.png)
 
 配置Feign日志的两种方式:
 
 方式一: 配置文件方式
+
 - 全局配置
+
 ```yaml
 feign:
   client:
@@ -661,7 +690,9 @@ feign:
       default:
         logger-level: full
 ```
+
 - 局部生效
+
 ```yaml
 feign:
   client:
@@ -669,7 +700,9 @@ feign:
       userservice:
         logger-level: full
 ```
+
 方式二: java代码方式, 需要声明一个Bean:
+
 ```java
 public class DefaultFeignConfiguration {
     @Bean
@@ -678,36 +711,46 @@ public class DefaultFeignConfiguration {
     }
 }
 ```
+
 - 全局配置
+
 ```
 @EnableFeignClients(defaultConfiguration = DefaultFeignConfiguration.class)
 ```
+
 - 局部生效
+
 ```
 @FeignClient(value = "userservice", configuration = DefaultFeignConfiguration.class)
 ```
+
 ### 3. Feign使用优化
+
 Feign底层的客户端实现:
+
 - URLConnection: 默认实现, 不支持连接池
 - Apache HttpClient: 支持连接池
 - OKHttp: 支持连接池
 
 因此优化Feign的性能主要包括:
+
 - 使用连接池代替默认的URLConnection
 - 日志级别, 最好用basic或none
 
 Feign添加HttpClient的支持
 
 引入依赖:
+
 ```xml
         <!--httpClient依赖-->
-        <dependency>
-            <groupId>io.github.openfeign</groupId>
-            <artifactId>feign-httpclient</artifactId>
-        </dependency>
+<dependency>
+    <groupId>io.github.openfeign</groupId>
+    <artifactId>feign-httpclient</artifactId>
+</dependency>
 ```
 
 yaml配置文件
+
 ```yaml
 feign:
   httpclient:
@@ -717,49 +760,59 @@ feign:
 ```
 
 ### 4. 最佳实践
-#### (1). 方式一(继承): 
+
+#### (1). 方式一(继承):
 
 给消费者的FeignClient和提供者的controller定义统一的父接口作为标准
 
 ![img_5.png](resources/img/img_5.png)
 
-缺点: 
+缺点:
+
 - 服务紧耦合
 - 父接口参数列表中的映射不会被继承
-### (2). 方式二(抽取): 
 
-将FeignClient抽取为独立模块, 并且把接口有关的POJO, 默认的Feign配置都放到这个模块中, 
+### (2). 方式二(抽取):
+
+将FeignClient抽取为独立模块, 并且把接口有关的POJO, 默认的Feign配置都放到这个模块中,
 提供给所有消费者使用
 
 ![img_6.png](resources/img/img_6.png)
 
 缺点:
+
 - 功能过多, 显得冗杂
 
 实现过程:
+
 - 首先创建一个module, 命名为feign-api, 然后引入feign的starter依赖
 - 将order-service中编写的UserClient, User, DefaultFeignConfiguration都复制到Feign-api项目中
 - 在order-service中引入feign-api的依赖
 - 修改order-service中的所有与上述三个组件有关的import部分, 改成导入feign-api中的包
 
 不同包的FeignClient的导入方式有两种方式:
+
 - 在@EanbleFeignClients注解中添加basePackages, 指定FeignClient所在的包
 - 在@EanbleFeignClients注解中添加clients, 指定具体的FeignClient字节码
 
 ## 八. GateWay网关组件
+
 ### (1). 为什么需要网关
-- 网关功能: 
-  - 身份认证和权限效验
-  - 服务路由, 负载均衡
-  - 请求限流
+
+- 网关功能:
+    - 身份认证和权限效验
+    - 服务路由, 负载均衡
+    - 请求限流
 - 网关技术实现(SpringCloud网关的实现两种):
-  - gateway
-  - zuul
-zuul是基于Servlet的实现, 属于阻塞式编程, 而SpringCloudGateway则是基于Spring5中提供的WebFlux, 
-属于响应式编程的实现, 具备更好的性能
+    - gateway
+    - zuul
+      zuul是基于Servlet的实现, 属于阻塞式编程, 而SpringCloudGateway则是基于Spring5中提供的WebFlux,
+      属于响应式编程的实现, 具备更好的性能
 
 ### (2). 搭建网关服务
-搭建网关服务的步骤: 
+
+搭建网关服务的步骤:
+
 1. 创建新module, 引入SpringCloudGateway的依赖和nacos的服务注册发现依赖:
    ```xml
    <!--nacos服务注册发现依赖-->
@@ -776,7 +829,7 @@ zuul是基于Servlet的实现, 属于阻塞式编程, 而SpringCloudGateway则�
    ```
 
 2. 实现请求路由功能(编写路由配置及nacos地址):
-![img.png](resources/img/img_7.png)
+   ![img.png](resources/img/img_7.png)
 
    ```yaml
    server:
@@ -805,15 +858,15 @@ zuul是基于Servlet的实现, 属于阻塞式编程, 而SpringCloudGateway则�
 3. 路由断言工厂5
    ![img.png](resources/img/img_9.png)
 4. 路由过滤器GatewayFilter
-   - 网关中提供的一种过滤器, 可以对象那个进入网关的请求和微服务返回的响应做处理
+    - 网关中提供的一种过滤器, 可以对象那个进入网关的请求和微服务返回的响应做处理
 
       ![img.png](resources/img/img_10.png)
-   - Spring提供的过滤器工厂
+    - Spring提供的过滤器工厂
 
       ![img.png](resources/img/img_11.png)
 
-   - 给所有进入userservice的请求添加一个请求头: Truth=itstudy is my workspace 
-   给配置文件直接加个过滤器配置
+    - 给所有进入userservice的请求添加一个请求头: Truth=itstudy is my workspace
+      给配置文件直接加个过滤器配置
    ```yaml
    spring:
      application:
@@ -824,7 +877,7 @@ zuul是基于Servlet的实现, 属于阻塞式编程, 而SpringCloudGateway则�
            filters:
              - AddRequestHeader=Truth,itstudy is my workspace
    ```
-   - 所有服务的请求都加上一个请求头
+    - 所有服务的请求都加上一个请求头
    ```yaml
    spring:
      application:
@@ -838,11 +891,11 @@ zuul是基于Servlet的实现, 属于阻塞式编程, 而SpringCloudGateway则�
 5. 全局过滤器 GlobalFilter
 
    与GatewayFilter的作用一样, 区别在于GateFilter通过配置定义, 处理逻辑是固定的, 而GlobalFilter的逻辑需要自己写代码实现
-   
+
    定义方式是实现GlobalFilter接口
-   
+
    案例: 定义全局过滤器, 拦截请求, 判断请求的参数是否满足下列要求:
-   
+
    ```java
    /**
     * className AuthorizeFilter
@@ -906,13 +959,16 @@ zuul是基于Servlet的实现, 属于阻塞式编程, 而SpringCloudGateway则�
 请求进入网关后会碰到三类过滤器: 当前路由的过滤器, DefaultFilter, GlobalFilter
 
 请求路由后, 会将当前路由过滤器和DefaultFilter, GlobalFilter, 合并到过滤器链(集合)中, 排序后依次执行每个过滤器
+
 - 每一个过滤器都必须制定一个int类型的order值, **order值越小, 优先级越高, 执行顺序越靠前**
 - GlobalFilter通过实现Order接口, 或者添加@Ordered接口来指定Order值, 有我们自己制定
 - 路由过滤器和defaultFilter的order由Spring制定, 默认是按照声明顺序从1递增
 - 当过滤器的order值一样时, 会按照 defaultFilter > 路由过滤器 > GlobalFilter的顺序来执行
 
 ### (3). 跨域问题处理
+
 跨域: 域名不一致就是跨域, 主要包括:
+
 - 域名不同: www.taobao.com 和 www.taobao.org 和 www.jd.com 和 miaosha.jd.com
 - 域名相同, 端口不同: localhost:8080 和 localhost:8081
 
@@ -921,6 +977,7 @@ zuul是基于Servlet的实现, 属于阻塞式编程, 而SpringCloudGateway则�
 解决方案: CORS
 
 网关处理跨域同样采用CORS方案, 只需如下配置:
+
 ```yaml
 spring:
   gateway:
@@ -943,53 +1000,65 @@ spring:
 ```
 
 ## 九. MQ异步通信技术
+
 ### 1. 初识MQ
+
 #### (1). 同步通讯
+
 微服务间基于Feign的调用就属于同步方式, 存在一些问题
+
 - 同步调用的优点:
-  - 时效性较强, 可以立即得到结果
-- 同步调用存在的问题: 
-  - 耦合度高: 每次加入新需求, 都要修改原来的代码
-  - 性能下降: 调用者需要等待服务提供者响应, 如果调用链过长则响应时间等于每次调用的时间之和
-  - 资源浪费: 调用链中的每个服务在等待响应过程中, 不能释放占用的资源, 高并发场景下会极度浪费系统资源
-  - 级联失败: 如果服务提供者出现问题, 所有调用者都会跟着出问题, 如同多米诺骨牌一样, 迅速导致整个微服务群故障
+    - 时效性较强, 可以立即得到结果
+- 同步调用存在的问题:
+    - 耦合度高: 每次加入新需求, 都要修改原来的代码
+    - 性能下降: 调用者需要等待服务提供者响应, 如果调用链过长则响应时间等于每次调用的时间之和
+    - 资源浪费: 调用链中的每个服务在等待响应过程中, 不能释放占用的资源, 高并发场景下会极度浪费系统资源
+    - 级联失败: 如果服务提供者出现问题, 所有调用者都会跟着出问题, 如同多米诺骨牌一样, 迅速导致整个微服务群故障
 
 #### (2). 异步通讯
+
 异步调用常见实现就是事件驱动模式
+
 - 异步通信优点:
-  - 优势一: 服务解耦, 服务通过订阅事件的方式实现解耦
-  - 优势二: 性能提升, 吞吐量提高
-  - 优势三: 服务没有强依赖, 不担心级联失败问题
-  - 优势四: 流量消峰
+    - 优势一: 服务解耦, 服务通过订阅事件的方式实现解耦
+    - 优势二: 性能提升, 吞吐量提高
+    - 优势三: 服务没有强依赖, 不担心级联失败问题
+    - 优势四: 流量消峰
 - 异步通信缺点:
-  - 依赖于Broker的可靠性, 安全性, 吞吐能力
-  - 架构复杂了, 业务没有明显的流程线, 不好追踪管理
+    - 依赖于Broker的可靠性, 安全性, 吞吐能力
+    - 架构复杂了, 业务没有明显的流程线, 不好追踪管理
 
 #### (3). MQ常见框架
+
 MQ(MessageQueue), 中文是消息队列, 字面来看就是存放消息的队列, 也就是事件驱动架构中的Broker.
 ![img.png](resources/img/img_17.png)
 
 ### 2. RabbitMQ快速入门
+
 #### (1). RabbitMQ概述和安装
+
 ![img.png](resources/img/img_18.png)
 
 [RabbitMQ部署指南.md](resources/RabbitMQ部署指南.md)
 
 RabbitMQ中的几个概念:
+
 - channel: 操作MQ的工具
 - exchange: 路由消息到队列
 - queue: 缓存消息
 - virtual host: 虚拟主机, 是对queue, exchange等资源的逻辑分组
 
 #### (2). 常见消息模型
+
 - 基本消息队列(BasicQueue)
 - 工作消息队列(WorkQueue)
 - 发布订阅(Publish, Subscribe), 又根据交换机类型不同分为三种:
-  - Fanout Exchange: 广播
-  - Direct Exchange: 路由
-  - Topic Exchange: 主题
+    - Fanout Exchange: 广播
+    - Direct Exchange: 路由
+    - Topic Exchange: 主题
 
 最基础的消息队列模型只包括三个角色:
+
 - publisher: 消息发布者, 将消息发送到队列queue
 - queue: 消息队列, 负责接受并缓存消息
 - consumer: 订阅队列, 处理队列中的消息
@@ -997,46 +1066,740 @@ RabbitMQ中的几个概念:
 publisher-queue-consumer
 
 **基本消息队列的消息发送流程**
+
 1. 建立connection
 2. 创建channel(通道)
 3. 利用channel声明队列
 4. 利用channel向队列发送消息
 
 **基本消息队列的消息接受流程**
+
 1. 建立connection
 2. 创建channel(通道)
 3. 利用channel声明队列
 4. 定义consumer的消费行为handleDelivery()
 5. 利用channel将消费者与队列绑定
 
-
 ### 3. SpringAMQP
+
 #### (1). 什么是SpringAMQP
+应用间消息通信的一种协议, 与语言和平台无关
+
 ![img.png](resources/img/img_19.png)
 
-特征: 
+特征:
+
 - 监听器容器, 用于异步处理入站消息
 - 用于发送和接收消息的RabbitTemplate
 - RabbitAdmin用于自动声明队列, 交换和排序
 
+#### (4). 利用SpringAMQP实现HelloWorld中的基础消息队列
 
+流程如下:
 
+1. 引入AMQP的依赖
+   ```xml
+   <!--AMQP依赖，包含RabbitMQ-->
+   <dependency>
+       <groupId>org.springframework.boot</groupId>
+       <artifactId>spring-boot-starter-amqp</artifactId>
+   </dependency>
+   ```
+2. 在publisher中编写测试方法, 向simple.queue发送消息
+    - 编写application.yml. 添加mq连接信息
+   ```yaml
+   spring:
+     rabbitmq:
+       host: 192.168.43.33 # rabbitMQ的ip地址
+       port: 5672 # 端口
+       username: itcast
+       password: 123321
+       virtual-host: / # 虚拟主机
+   ```
+    - publisher新建一个测试类编写测试方法
+   ```java
+    @RunWith(SpringRunner.class)
+    @SpringBootTest
+    public class SpringAmqpTest {
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
 
+    @Test
+    public void testSendMessage2SimpleQueue() {
+        String queueName = "simple.queue";
+        String message = "hello, spring";
+        rabbitTemplate.convertAndSend(queueName, message);
+    }
+    }
+   ```
+#### (5). consumer中编写消费逻辑, 监听simple.queue
+1. 在consumer服务中编写application.yml, 添加mq连接信息
+   ```yaml
+   spring:
+     rabbitmq:
+       host: 192.168.43.33 # rabbitMQ的ip地址
+       port: 5672 # 端口
+       username: itcast
+       password: 123321
+       virtual-host: / # 虚拟主机
+   ```
+2. 编写测试类监听消息
+   ```java
+   @Component
+   public class SpringRabbitListener {
 
+      @RabbitListener(queues = "simple.queue")
+      public void listenSimpleQueue(String msg) {
+          System.out.println("消费者接受到simple.queue的消息: [" + msg + "]");
+      }
+   }
 
+   ```
+#### (6). Work Queue工作队列
 
+Work queue, 工作队列, 可以提高消息处理速度, 避免队列消息堆积
 
+![img.png](resources/img/img_20.png)
 
+- 案例: 模拟WorkQueue实现一个队列绑定多个消费者
+  - 在publisher服务中定义测试方法, 每秒产生50条消息, 发送到simple.queue
+  - 在consumer服务中定义两个消息监听者, 都监听simple.queue队列
+  - 消费者1每秒处理50条消息, 消费者2每秒处理10条消息
+  
 
+publisher:
+```java
+@RunWith(SpringRunner.class)
+@SpringBootTest
+public class SpringAmqpTest {
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
 
+    @Test
+    public void testSendMessage2SimpleQueue() {
+        String queueName = "simple.queue";
+        String message = "hello, spring";
+        rabbitTemplate.convertAndSend(queueName, message);
+    }
 
+    @Test
+    public void testSendMessage2WorkQueue() {
+        String queueName = "simple.queue";
+        String message = "hello, spring__";
+        try {
+            for (int i = 0; i < 50; i++) {
+                rabbitTemplate.convertAndSend(queueName, message + i);
 
+                Thread.sleep(20);
 
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
 
+consumer:
+```java
+@Component
+public class SpringRabbitListener {
 
+    /*@RabbitListener(queues = "simple.queue")
+    public void listenSimpleQueue(String msg) {
+        System.out.println("消费者接受到simple.queue的消息: [" + msg + "]");
+    }*/
 
+    @RabbitListener(queues = "simple.queue")
+    public void listenWorkQueue1(String msg) {
+        System.out.println("消费者1接受到simple.queue的消息: [" + msg + "]" + LocalTime.now());
+        try {
+            Thread.sleep(20);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 
+    @RabbitListener(queues = "simple.queue")
+    public void listenWorkQueue2(String msg) {
+        System.err.println("消费者2......接受到simple.queue的消息: [" + msg + "]" + LocalTime.now());
+        try {
+            Thread.sleep(200);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
 
+**消费预取限制**
+修改application.yml文件, 设置preFetch这个值, 可以控制预取消息的上限
+```yaml
+spring:
+  rabbitmq:
+    host: 192.168.43.33 # 主机名
+    port: 5672 # 端口
+    virtual-host: / # 虚拟主机
+    username: itcast # 用户名
+    password: 123321 # 密码
+    listener:
+      simple:
+        prefetch: 1 # 控制每次预取消息的次数
+```
 
+#### (7). exchange(交换机)
 
+发布订阅模式与之前案例的区别就是允许将同意消息发送给多个消费者, 实现方式是加入了exchange(交换机)
 
+![img.png](resources/img/img_21.png)
+
+常见exchange类型包括:
+- Fanout: 广播
+- Direct: 路由
+- Topic: 话题
+
+`注意: exchange负责消息路由, 而不是存储, 路由失败则消息丢失`
+
+##### a. Fanout exchange
+- **Fanout Exchange会将接受到的消息路由到每一个跟其绑定的queue**
+
+  ![img.png](resources/img/img_22.png)
+
+- 在consumer服务声明Exchange, Queue, Binding
+```java
+/**
+ * className FanoutConfig
+ * packageName cn.itcast.mq.config
+ * Description FanoutConfig
+ *
+ * @author huian
+ * @version 1.0
+ * @Date: 2023/8/14 19:52
+ */
+public class FanoutConfig {
+    /**
+     * Description: fanoutExchange ---> itcast.fanout
+     * @return org.springframework.amqp.core.FanoutExchange
+     * @author huian
+     * @Date 2023/8/14
+     * */
+    @Bean
+    public FanoutExchange fanoutExchange() {
+        return new FanoutExchange("itcast.fanout");
+    }
+
+    /**
+     * Description: fanoutQueue1 ---> fanout.queue1
+     * @return org.springframework.amqp.core.Queue
+     * @author huian
+     * @Date 2023/8/14
+     * */
+    @Bean
+    public Queue fanoutQueue1(){
+        return new Queue("fanout.queue1");
+    }
+
+    /**
+     * Description: fanoutQueue2 ---> fanout.queue2
+     * @return org.springframework.amqp.core.Queue
+     * @author huian
+     * @Date 2023/8/14
+     * */
+    @Bean
+    public Queue fanoutQueue2(){
+        return new Queue("fanout.queue2");
+    }
+
+    /**
+     * Description: fanoutBinding ---> 绑定队列1到交换机
+     * @return org.springframework.amqp.core.Binding
+     * @author huian
+     * @Date 2023/8/14
+     * */
+    @Bean
+    public Binding fanoutBinding1(Queue fanoutQueue1, FanoutExchange fanoutExchange) {
+        return BindingBuilder.bind(fanoutQueue1).to(fanoutExchange);
+    }
+
+    /**
+     * Description: fanoutBinding ---> 绑定队列2到交换机
+     * @return org.springframework.amqp.core.Binding
+     * @author huian
+     * @Date 2023/8/14
+     * */
+    @Bean
+    public Binding fanoutBinding2(Queue fanoutQueue2, FanoutExchange fanoutExchange) {
+        return BindingBuilder.bind(fanoutQueue2).to(fanoutExchange);
+    }
+
+}
+```
+- consume服务设置监听
+```java
+/**
+ * className SpringRabbitListener
+ * packageName cn.itcast.mq.listener
+ * Description SpringRabbitListener
+ *
+ * @author huian
+ * @version 1.0
+ * @Date: 2023/8/14 15:41
+ */
+@Component
+public class SpringRabbitListener {
+    /**
+     * Description: listenWorkQueue2
+     * @return void
+     * @author huian
+     * @Date 2023/8/14
+     * */
+    @RabbitListener(queues = "fanout.queue1")
+    public void listenFanoutQueue1(String msg) {
+        System.out.println("消费者......接受到fanout.queue1的消息: [" + msg + "]" + LocalTime.now());
+        try {
+            Thread.sleep(200);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Description: listenWorkQueue2
+     * @return void
+     * @author huian
+     * @Date 2023/8/14
+     * */
+    @RabbitListener(queues = "fanout.queue2")
+    public void listenFanoutQueue2(String msg) {
+        System.out.println("消费者......接受到fanout.queue2的消息: [" + msg + "]" + LocalTime.now());
+        try {
+            Thread.sleep(200);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+- 设置发送消息的测试类发送消息到FanoutExchange
+```java
+@RunWith(SpringRunner.class)
+@SpringBootTest
+public class SpringAmqpTest {
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
+    @Test
+    public void testSendFanoutExchange() {
+        /*交换机名称*/
+        String exchangeName = "itcast.fanout";
+        /*消息*/
+        String message = "hello, every one!";
+        /*发送消息*/
+        rabbitTemplate.convertAndSend(exchangeName, "", message);
+    }
+}
+```
+
+**交换机的作用是什么?**
+- 接受publisher发送的消息
+- 将消息按照规则路由到与之绑定的队列
+- 不能缓存消息, 路由失败, 消息丢失
+- FanoutExchange的会将消息路由到每个绑定的队列
+- 
+**声明队列, 交换机, 绑定关系的Bean是什么?**
+- Queue
+- FanoutExchange
+- Binding
+
+##### b. Direct exchange
+Direct Exchange 会将接收到的消息根据规则路由到制定的Queue, 因此称为路由模式(routes).
+- 每一个Queue都与Exchange设置一个BindingKey
+- 发布者发送消息时, 制定消息的RoutingKey
+- Exchange将消息路由到BindingKey羽小希RoutingKey一致的队列
+
+![img.png](resources/img/img_23.png)
+
+- 利用@RabbitListener声明Exchange, Queue, RoutingKey
+```java
+
+/**
+ * className SpringRabbitListener
+ * packageName cn.itcast.mq.listener
+ * Description SpringRabbitListener
+ *
+ * @author huian
+ * @version 1.0
+ * @Date: 2023/8/14 15:41
+ */
+@Component
+public class SpringRabbitListener {
+    /**
+     * Description: listenDirectQueue1 ---> direct 交换机
+     * @return void
+     * @author huian
+     * @Date 2023/8/15
+     * */
+    @RabbitListener(bindings = @QueueBinding(
+            value = @Queue(name = "direct.queue1"),
+            exchange = @Exchange(name = "itcast.direct"),
+            key = {"red", "blue"}
+    ))
+    public void listenDirectQueue1(String msg) {
+        System.out.println("消费者接受到direct.queue1的消息: [" + msg + "]");
+    }
+
+    /**
+     * Description: listenDirectQueue2 ---> direct 交换机
+     * @return void
+     * @author huian
+     * @Date 2023/8/15
+     * */
+    @RabbitListener(bindings = @QueueBinding(
+            value = @Queue(name = "direct.queue2"),
+            exchange = @Exchange(name = "itcast.direct"),
+            key = {"red", "yellow"}
+    ))
+    public void listenDirectQueue2(String msg) {
+        System.out.println("消费者接受到direct.queue2的消息: [" + msg + "]");
+    }
+}
+```
+测试
+```java
+@RunWith(SpringRunner.class)
+@SpringBootTest
+public class SpringAmqpTest {
+    @Test
+    public void testSendDirectExchange() {
+        /*交换机名称*/
+        String exchangeName = "itcast.direct";
+        /*消息*/
+        String blueMessage = "hello, blue";
+        String redMessage = "hello, red";
+        String yellowMessage = "hello, yellow";
+        /*发送消息*/
+        rabbitTemplate.convertAndSend(exchangeName, "blue", blueMessage);
+        rabbitTemplate.convertAndSend(exchangeName, "red", redMessage);
+        rabbitTemplate.convertAndSend(exchangeName, "yellow", yellowMessage);
+    }
+}
+```
+
+**描述下Direct交换机与Fanout交换机的差异?**
+- Fanout交换机将消息路由给每一个与之绑定的队列
+- Direct交换机根据RoutingKey判断路由给哪个队列
+- 如果多个队列具有相同的RoutingKey, 则与Fanout功能类似
+
+**基于@RabbitListener注解声明队列和交换机有哪些常见注解?**
+- @Queue
+- @Exchange
+
+##### c. Topic exchange
+TopicExchange与DirectExchange类似, 区别在于routingKey必须是多个单词的列表, 并且以.分割
+
+![img_24.png](resources/img/img_24.png)
+
+老三步:
+- 声明队列和交换机
+```java
+/**
+ * className SpringRabbitListener
+ * packageName cn.itcast.mq.listener
+ * Description SpringRabbitListener
+ *
+ * @author huian
+ * @version 1.0
+ * @Date: 2023/8/14 15:41
+ */
+@Component
+public class SpringRabbitListener {
+    /**
+     * Description: listenTopicQueue1 ---> topic exchange
+     * @return void
+     * @author huian
+     * @Date 2023/8/15
+     * */
+    @RabbitListener(bindings = @QueueBinding(
+            value = @Queue(name = "topic.queue1"),
+            exchange = @Exchange(name = "itcast.topic", type = ExchangeTypes.TOPIC),
+            key = "china.#"
+    ))
+    public void listenTopicQueue1(String msg) {
+        System.out.println("消费者接受到topic.queue1的消息: [" + msg + "]");
+    }
+
+    /**
+     * Description: listenTopicQueue2 ---> topic exchange
+     * @return void
+     * @author huian
+     * @Date 2023/8/15
+     * */
+    @RabbitListener(bindings = @QueueBinding(
+            value = @Queue(name = "topic.queue2"),
+            exchange = @Exchange(name = "itcast.topic", type = ExchangeTypes.TOPIC),
+            key = "#.news"
+    ))
+    public void listenTopicQueue2(String msg) {
+        System.out.println("消费者接受到topic.queue2的消息: [" + msg + "]");
+    }
+}
+```
+- 测试
+```java
+@RunWith(SpringRunner.class)
+@SpringBootTest
+public class SpringAmqpTest {
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
+    @Test
+    public void testSendTopicExchange() {
+        /*交换机名称*/
+        String exchangeName = "itcast.topic";
+        /*消息*/
+        String societyNews = "中国青少年失业率达20%以上";
+        String weatherNews = "台风登录沿海地区";
+        /*发送消息*/
+        rabbitTemplate.convertAndSend(exchangeName, "china.news", societyNews);
+        rabbitTemplate.convertAndSend(exchangeName, "china.weather", weatherNews);
+    }
+}
+```
+
+**描述下Direct交换机与Topic交换机的差异**
+- direct只能一一对应消费单个的routingKey
+- 而topic可以使用通配符*和#来匹配多个routingKey
+
+#### (8) AMQP-消息转换器
+在SpringAMQP的发送方法中, 接受消息的类型是Object, 
+也就是说我们可以发送任意对象类型的消息, SpringAMQP会帮我们序列化为字节后发送
+
+![img_25.png](resources/img/img_25.png)
+
+配置消息转换器
+
+```java
+@SpringBootApplication
+public class PublisherApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(PublisherApplication.class);
+    }
+
+    @Bean
+    public MessageConverter messageConverter() {
+        return new Jackson2JsonMessageConverter();
+    }
+}
+```
+
+![img_26.png](resources/img/img_26.png)
+
+设置监听器
+
+```java
+/**
+ * className SpringRabbitListener
+ * packageName cn.itcast.mq.listener
+ * Description SpringRabbitListener
+ *
+ * @author huian
+ * @version 1.0
+ * @Date: 2023/8/14 15:41
+ */
+@Component
+public class SpringRabbitListener {
+    /**
+     * Description: listenObjectQueue ---> object.queue
+     * @return void
+     * @author huian
+     * @Date 2023/8/15
+     * */
+    @RabbitListener(queues = "object.queue")
+    public void listenObjectQueue(Map<String, Object> msg) {
+        System.out.println("消费者接受到object.queue的消息: " + msg);
+    }
+}
+```
+
+**SpringAMQP中消息的序列化和反序列化是怎么实现的?**
+- 利用MessageConverter实现的, 默认是JDK的序列化
+- 注意发送方与接收方必须使用相同的MessageConverter
+
+## 十. 分布式搜索---elasticsearch
+### 1. 初识elasticsearch
+**了解ES**
+- elasticsearch是一款非常强大的开源索引引擎, 可以帮我们从海量数据中快速找到需要的内容.
+- elasticsearch结合kibana, Logstash, Beats, 也就是elastic stack (ELK). 被广泛应用在日志数据分析, 实时监控等领域
+- elasticsearch是elastic stack核心, 负责存储, 搜索. 分析数据
+
+![img_27.png](resources/img/img_27.png)
+
+Lucene: 是Apache的开元搜索引擎类库, 提供了搜索引擎的核心API
+
+相比于lucene, elasticsearch具备下列优势:
+- 支持分布式, 可水平扩展
+- 提供Restful接口, 可被任何语言调用
+
+**正向索引和倒排索引**
+elasticsearch采用倒排索引(基于词条创建索引, 再寻找id):
+- 文档(document): 每条数据就是一个文档
+- 词条(term): 文档按照语义分成的词语
+
+![img_28.png](resources/img/img_28.png)
+
+**文档**
+elasticsearch是面向文档存储的, 可以是数据库中的一条商品数据, 一个订单信息
+文档数据会被序列化成json格式后存储在elasticsearch中
+
+**索引**
+- 索引(index): 相同类型的文档的集合
+- 映射(mapping): 索引中文档的字段约束信息, 类似表的结构约束
+![img_29.png](resources/img/img_29.png)
+
+Mysql和Elasticsearch概念对比
+![img_29.png](resources/img/img_30.png)
+
+- Mysql: 擅长事务类型操作, 可以确保数据的安全和一致性
+- Elasticsearch: 擅长海量数据的搜索, 分析, 计算
+
+**安装Elasticsearch**
+
+[安装elasticsearch.md](resources/安装elasticsearch.md)
+
+### 2. 索引库操作
+#### (1). mapping映射属性
+mapping是对索引库中文档的约束, 常见的mapping属性包括:
+- type: 字段数据类型, 常见的简单类型有: 
+  - 字符串: text(可分词的文本), keyword(精确值, 例如: 品牌, 国家, ip地址)
+  - 数值: long, integer, short, byte, double, float
+  - 布尔: boolean
+  - 日期: date
+  - 对象: object
+- index: 是否创建索引, 默认为true
+- analyzer: 使用哪种分词器
+- properties: 该字段的子字段
+
+#### (2). 索引库的CRUD
+#### A. 创建索引库 请求内容用DSL语句表示
+```json lines
+PUT /huian
+{
+  "mappings": {
+    "properties": {
+      "info": {
+        "type": "text",
+        "analyzer": "ik_smart"
+      },
+      "email": {
+        "type": "keyword",
+        "index": false
+      },
+      "name": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "keyword"
+          },
+          "lastName": {
+            "type": "keyword"
+          }
+        }
+      }
+    }
+  }
+}
+```
+#### B. 查看删除索引库
+```json lines
+GET / 索引库名
+
+DELETE / 索引库名
+```
+#### C. 增加索引库字段
+索引库和mapping一旦创建无法修改, 但是可以添加新的字段, 语法如下:
+```json lines
+PUT /索引库名/_mapping
+{
+  "properties": {
+    "新字段名": {
+      "type": "integer"
+    }
+  }
+}
+
+```
+### 3. 文档操作
+#### A. 新增文档
+```json lines
+POST /索引库名/_doc/文档id
+{
+  "字段1": "值1",
+  "字段2": "值2",
+  "字段3": {
+    "子属性1": "值3",
+    "子属性2": "值3"
+  },
+  // ...
+}
+```
+#### B. 查看文档
+```json lines
+GET /索引库名/_doc/文档id
+```
+#### C. 删除文档
+```json lines
+DELETE /索引库名/_doc/文档id
+```
+#### D. 修改文档
+- 方式一: 全量修改, 会删除旧文档, 添加新文档
+```json lines
+PUT /索引库名/_doc/文档id
+{
+  "字段1": "值1",
+  "字段2": "值2",
+  "字段3": {
+    "子属性1": "值3",
+    "子属性2": "值3"
+  },
+  // ...
+}
+```
+- 方式二: 增量修改, 修改指定字段值
+```json lines
+POST /索引库名/_update/文档id
+{
+  "doc": {
+    "字段名": "新的值",
+    //...
+  }
+}
+```
+```json lines
+POST /huian/_update/1
+{
+  "doc": {
+    "email":"Yun@itstudy.com"
+  }
+}
+```
+### 4. RestClient操作索引库(RestAPI)
+ES官方提供了各种不同语言的客户端, 用来操作ES. 这些客户端的本质就是组装DSL语句, 通过http发送给ES
+#### A. 创建索引库
+- 导入项目
+- 分析数据结构
+mapping要考虑的问题:
+  - 字段名, 数据类型, 是否参与搜索, 是否分词, 如果分词, 分词器是什么
+
+#### B. 初始化JavaRestClient
+- 引入es的RestHighLevelClient依赖:
+```xml
+
+```
+- 覆盖SpringBoot默认的ES版本
+```xml
+
+```
+- 初始化RestHighLevelClient:
+```java
+
+```
