@@ -1405,7 +1405,7 @@ public class SpringAmqpTest {
 - 将消息按照规则路由到与之绑定的队列
 - 不能缓存消息, 路由失败, 消息丢失
 - FanoutExchange的会将消息路由到每个绑定的队列
-- 
+
 **声明队列, 交换机, 绑定关系的Bean是什么?**
 - Queue
 - FanoutExchange
