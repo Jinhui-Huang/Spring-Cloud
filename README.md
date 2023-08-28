@@ -1249,7 +1249,7 @@ spring:
 
 #### (7). exchange(交换机)
 
-发布订阅模式与之前案例的区别就是允许将同意消息发送给多个消费者, 实现方式是加入了exchange(交换机)
+发布订阅模式与之前案例的区别就是允许将统一消息发送给多个消费者, 实现方式是加入了exchange(交换机)
 
 ![img.png](resources/img/img_21.png)
 
@@ -1415,7 +1415,7 @@ public class SpringAmqpTest {
 Direct Exchange 会将接收到的消息根据规则路由到制定的Queue, 因此称为路由模式(routes).
 - 每一个Queue都与Exchange设置一个BindingKey
 - 发布者发送消息时, 制定消息的RoutingKey
-- Exchange将消息路由到BindingKey羽小希RoutingKey一致的队列
+- Exchange将消息路由到BindingKey与RoutingKey一致的队列
 
 ![img.png](resources/img/img_23.png)
 
