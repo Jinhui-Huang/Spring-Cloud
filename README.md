@@ -1625,3 +1625,4 @@ public class SpringRabbitListener {
 - 利用MessageConverter实现的, 默认是JDK的序列化
 - 注意发送方与接收方必须使用相同的MessageConverter
 
+[Spring-Cloud-ElasticSearch](https://github.com/Jinhui-Huang/Spring-Cloud-Elasticsearch)
