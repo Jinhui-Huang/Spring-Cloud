@@ -10,11 +10,22 @@ spring:
     name: orderservice  #order服务
   cloud:
     nacos:
-      server-addr: localhost:80
+      server-addr: localhost:8840
       discovery:
         cluster-name: SH #集群名称
         namespace: 9b341b5b-ed2d-41be-8dfe-14ca35397f86
         ephemeral: false # 非临时实例
+    sentinel:
+      transport:
+        dashboard: localhost:10086 # sentinel控制台地址
+      web-context-unify: false # 关闭context整合
+      datasource:
+        flow: # 限流
+          nacos:
+            server-addr: localhost:8840
+            data-id: orderservice-flow-rules
+            group-id: SENTINEL_GROUP
+            rule-type: flow # 还可以是: degrade, authority, param-flow
 mybatis:
   type-aliases-package: cn.itcast.user.pojo
   configuration:
@@ -32,3 +43,5 @@ feign:
     enabled: true # 支持httpClient的开关
     max-connections: 200 # 最大连接数
     max-connections-per-route: 50 # 单个路径的最大连接数
+  sentinel:
+    enabled: true # 开启feign对sentinel的支持
